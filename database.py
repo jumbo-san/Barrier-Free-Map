@@ -1,23 +1,19 @@
-import pyodbc
+import pymssql
 import pandas as pd
-import os
 import streamlit as st
+import os
 
 def get_connection():
-    # Streamlit CloudではSecretsから、ローカルではsecrets.tomlから読み込む
     try:
         password = st.secrets["AZURE_DB_PASSWORD"]
     except:
         password = os.environ.get("AZURE_DB_PASSWORD", "")
     
-    conn = pyodbc.connect(
-        'DRIVER={ODBC Driver 18 for SQL Server};'
-        'SERVER=barrier-free-server.database.windows.net;'
-        'DATABASE=barrier-free-db;'
-        'UID=じゃんぼ;'
-        'PWD=' + password + ';'
-        'Encrypt=yes;'
-        'TrustServerCertificate=no;'
+    conn = pymssql.connect(
+        server="barrier-free-server.database.windows.net",
+        user="じゃんぼ",
+        password=password,
+        database="barrier-free-db"
     )
     return conn
 

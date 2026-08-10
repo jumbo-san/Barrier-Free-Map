@@ -3,4 +3,4 @@ folium
 streamlit_folium
 pandas
 geopy
-pyodbc
+pymssql
