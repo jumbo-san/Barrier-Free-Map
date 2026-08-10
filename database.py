@@ -1,39 +1,50 @@
-import sqlite3
+import pyodbc
 import pandas as pd
+import os
 
 def get_connection():
-    conn = sqlite3.connect("spots.db")
+    conn = pyodbc.connect(
+        'DRIVER={ODBC Driver 18 for SQL Server};'
+        'SERVER=barrier-free-server.database.windows.net;'
+        'DATABASE=barrier-free-db;'
+        'UID=じゃんぼ;'
+        'PWD=' + os.environ.get("AZURE_DB_PASSWORD", "") + ';'
+        'Encrypt=yes;'
+        'TrustServerCertificate=no;'
+    )
     return conn
 
 # テーブルを作成する関数
 def create_table():
     conn = get_connection()
     cursor = conn.cursor()
-    
+
     # ユーザー投稿テーブルの作成
     cursor.execute("""
-        CREATE TABLE IF NOT EXISTS pins (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            場所名 TEXT NOT NULL,
-            種類 TEXT NOT NULL,
-            緯度 REAL NOT NULL,
-            経度 REAL NOT NULL,
-            備考 TEXT,
-            投稿日時 TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='pins' AND xtype='U')
+        CREATE TABLE pins (
+            id INT PRIMARY KEY IDENTITY(1,1),
+            場所名 NVARCHAR(255) NOT NULL,
+            種類 NVARCHAR(50) NOT NULL,
+            緯度 FLOAT NOT NULL,
+            経度 FLOAT NOT NULL,
+            備考 NVARCHAR(1000),
+            投稿日時 DATETIME DEFAULT GETDATE()
         )
     """)
 
     # 公式データテーブルの作成
     cursor.execute("""
-        CREATE TABLE IF NOT EXISTS official_pins (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            駅名 TEXT NOT NULL,
-            事業者名 TEXT,
-            路線名 TEXT,
-            種類 TEXT NOT NULL,
-            緯度 REAL NOT NULL,
-            経度 REAL NOT NULL,
-            設置数 TEXT
+        IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='official_pins' AND xtype='U')
+        CREATE TABLE official_pins (
+            id INT PRIMARY KEY IDENTITY(1,1),
+            駅名 NVARCHAR(255) NOT NULL,
+            事業者名 NVARCHAR(255),
+            路線名 NVARCHAR(255),
+            種類 NVARCHAR(50) NOT NULL,
+            緯度 FLOAT NOT NULL,
+            経度 FLOAT NOT NULL,
+            設置数 NVARCHAR(50)
         )
     """)
 
@@ -51,29 +62,24 @@ def import_official_pins(csv_path):
     df = pd.read_csv(csv_path, encoding="cp932")
 
     for _, row in df.iterrows():
-        緯度 = row["緯度"]
-        経度 = row["経度"]
+        try:
+            緯度 = float(row["緯度"])
+            経度 = float(row["経度"])
+        except (ValueError, TypeError):
+            continue
+
         駅名 = row["鉄道駅の名称"]
         事業者名 = row["鉄道事業者名"]
         路線名 = row["路線名"]
         エレベーター数 = str(row["エレベーターの設置基数"]).strip()
         傾斜路数 = str(row["傾斜路の設置箇所数"]).strip()
 
-        # 緯度経度が無効な行はスキップ
-        try:
-            緯度 = float(緯度)
-            経度 = float(経度)
-        except (ValueError, TypeError):
-            continue
-
-        # エレベーターがある駅
         if エレベーター数 not in ["-", "nan", ""]:
             cursor.execute("""
                 INSERT INTO official_pins (駅名, 事業者名, 路線名, 種類, 緯度, 経度, 設置数)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
             """, (駅名, 事業者名, 路線名, "エレベーター", 緯度, 経度, エレベーター数))
 
-        # スロープ（傾斜路）がある駅
         if 傾斜路数 not in ["-", "nan", ""]:
             cursor.execute("""
                 INSERT INTO official_pins (駅名, 事業者名, 路線名, 種類, 緯度, 経度, 設置数)
@@ -97,8 +103,7 @@ def insert_pin(場所名, 種類, 緯度, 経度, 備考):
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("""
-        INSERT INTO pins 
-        (場所名, 種類, 緯度, 経度, 備考)
+        INSERT INTO pins (場所名, 種類, 緯度, 経度, 備考)
         VALUES (?, ?, ?, ?, ?)
     """, (場所名, 種類, 緯度, 経度, 備考))
     conn.commit()
@@ -110,7 +115,7 @@ def get_all_pins():
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM pins ORDER BY 投稿日時 DESC")
     pins = cursor.fetchall()
-    conn.close() 
+    conn.close()
     return pins
 
 # ピンの種類で取得する関数
