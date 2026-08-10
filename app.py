@@ -1,5 +1,6 @@
 import streamlit as st
 import folium
+from folium.plugins import MarkerCluster
 from streamlit_folium import st_folium
 import database
 import score
@@ -49,6 +50,10 @@ m = folium.Map(
     zoom_start=15  
 )
 
+# クラスタリンググループを作成
+user_cluster = MarkerCluster(name="ユーザー投稿").add_to(m)
+official_cluster = MarkerCluster(name="公式データ（JR）").add_to(m)
+
 # ユーザー投稿ピンを表示
 reliability_data = database.get_reliability_scores()
 
@@ -81,7 +86,7 @@ for data in reliability_data:
         popup=folium.Popup(popup_text, max_width=200),
         tooltip=f"{icon_emoji}{場所名}",
         icon=folium.Icon(color=color, icon=icon)
-    ).add_to(m)
+    ).add_to(user_cluster)
 
 # 公式ピンを表示
 if show_official:
@@ -115,7 +120,7 @@ if show_official:
             popup=folium.Popup(popup_text, max_width=200),
             tooltip=f"🏛️{駅名}駅",
             icon=folium.Icon(color="orange", icon="info-sign")
-        ).add_to(m)
+        ).add_to(official_cluster)
 
 # 凡例
 st.caption("🔵　エレベーター（投稿）　🟢　スロープ（投稿）　🟠　公式データ（JR）　✅確認済み　🔄確認中")
