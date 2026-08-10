@@ -19,7 +19,6 @@ def create_table():
     conn = get_connection()
     cursor = conn.cursor()
 
-    # ユーザー投稿テーブルの作成
     cursor.execute("""
         IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='pins' AND xtype='U')
         CREATE TABLE pins (
@@ -33,7 +32,6 @@ def create_table():
         )
     """)
 
-    # 公式データテーブルの作成
     cursor.execute("""
         IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='official_pins' AND xtype='U')
         CREATE TABLE official_pins (
@@ -56,7 +54,6 @@ def import_official_pins(csv_path):
     conn = get_connection()
     cursor = conn.cursor()
 
-    # 既存データを削除（重複防止）
     cursor.execute("DELETE FROM official_pins")
 
     df = pd.read_csv(csv_path, encoding="cp932")
@@ -89,11 +86,36 @@ def import_official_pins(csv_path):
     conn.commit()
     conn.close()
 
-# 公式ピンを全件取得する関数
-def get_official_pins():
+# 表示範囲内の公式ピンを取得する関数
+def get_official_pins_in_bounds(south, north, west, east):
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT 駅名, 事業者名, 路線名, 種類, 緯度, 経度, 設置数 FROM official_pins")
+    cursor.execute("""
+        SELECT 駅名, 事業者名, 路線名, 種類, 緯度, 経度, 設置数
+        FROM official_pins
+        WHERE 緯度 BETWEEN ? AND ?
+        AND 経度 BETWEEN ? AND ?
+    """, (south, north, west, east))
+    results = cursor.fetchall()
+    conn.close()
+    return results
+
+# 表示範囲内のユーザー投稿ピンを取得する関数
+def get_reliability_scores_in_bounds(south, north, west, east):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT 
+            場所名,
+            種類,
+            COUNT(*) as 投稿数,
+            AVG(緯度) as 平均緯度,
+            AVG(経度) as 平均経度
+        FROM pins
+        WHERE 緯度 BETWEEN ? AND ?
+        AND 経度 BETWEEN ? AND ?
+        GROUP BY 場所名, 種類
+    """, (south, north, west, east))
     results = cursor.fetchall()
     conn.close()
     return results

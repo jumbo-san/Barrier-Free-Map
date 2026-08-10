@@ -44,6 +44,24 @@ with col2:
 with col3:
     st.page_link("pages/2_一覧.py", label="投稿一覧を見る", use_container_width=True)
 
+# デフォルトの表示範囲（初回表示時）
+DEFAULT_BOUNDS = {
+    "south": 35.38,
+    "north": 35.46,
+    "west": 136.22,
+    "east": 136.32
+}
+
+# 地図の表示範囲をsession_stateで管理
+if "bounds" not in st.session_state:
+    st.session_state["bounds"] = DEFAULT_BOUNDS
+
+bounds = st.session_state["bounds"]
+south = bounds["south"]
+north = bounds["north"]
+west = bounds["west"]
+east = bounds["east"]
+
 # 地図作成
 m = folium.Map(
     location=[35.4198, 136.2657], 
@@ -54,8 +72,8 @@ m = folium.Map(
 user_cluster = MarkerCluster(name="ユーザー投稿").add_to(m)
 official_cluster = MarkerCluster(name="公式データ（JR）").add_to(m)
 
-# ユーザー投稿ピンを表示
-reliability_data = database.get_reliability_scores()
+# 表示範囲内のユーザー投稿ピンを取得して表示
+reliability_data = database.get_reliability_scores_in_bounds(south, north, west, east)
 
 for data in reliability_data:
     場所名 = data[0]
@@ -88,9 +106,9 @@ for data in reliability_data:
         icon=folium.Icon(color=color, icon=icon)
     ).add_to(user_cluster)
 
-# 公式ピンを表示
+# 表示範囲内の公式ピンを取得して表示
 if show_official:
-    official_pins = database.get_official_pins()
+    official_pins = database.get_official_pins_in_bounds(south, north, west, east)
 
     for pin in official_pins:
         駅名 = pin[0]
@@ -125,4 +143,17 @@ if show_official:
 # 凡例
 st.caption("🔵　エレベーター（投稿）　🟢　スロープ（投稿）　🟠　公式データ（JR）　✅確認済み　🔄確認中")
 
-st_folium(m, use_container_width=True, height=650)
+# 地図を表示して表示範囲を取得
+map_data = st_folium(m, use_container_width=True, height=650)
+
+# 地図の表示範囲が変わったらsession_stateを更新して再描画
+if map_data and map_data.get("bounds"):
+    new_bounds = {
+        "south": map_data["bounds"]["_southWest"]["lat"],
+        "north": map_data["bounds"]["_northEast"]["lat"],
+        "west": map_data["bounds"]["_southWest"]["lng"],
+        "east": map_data["bounds"]["_northEast"]["lng"],
+    }
+    if new_bounds != st.session_state["bounds"]:
+        st.session_state["bounds"] = new_bounds
+        st.rerun()
