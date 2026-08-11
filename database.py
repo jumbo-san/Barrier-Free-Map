@@ -10,7 +10,13 @@ def get_engine():
     except:
         url = os.environ.get("SUPABASE_URL", "")
 
-    engine = sqlalchemy.create_engine(url)
+    engine = sqlalchemy.create_engine(
+        url,
+        pool_pre_ping=True,      # 接続前に生存確認
+        pool_recycle=300,        # 5分ごとに接続をリサイクル
+        pool_size=5,
+        max_overflow=10
+    )
     return engine
 
 # テーブルを作成する関数
