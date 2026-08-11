@@ -1,3 +1,1 @@
-freetds-bin
-freetds-dev
-libct4
+libssl-dev
