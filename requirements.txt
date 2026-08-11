@@ -4,4 +4,4 @@ streamlit_folium
 pandas
 geopy
 sqlalchemy
-python-tds
+psycopg2-binary
