@@ -3,6 +3,5 @@ folium
 streamlit_folium
 pandas
 geopy
+psycopg2-binary
 sqlalchemy
-python-tds
-sqlalchemy-pytds

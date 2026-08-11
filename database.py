@@ -6,20 +6,11 @@ import os
 
 def get_engine():
     try:
-        password = st.secrets["AZURE_DB_PASSWORD"]
+        url = st.secrets["SUPABASE_URL"]
     except:
-        password = os.environ.get("AZURE_DB_PASSWORD", "")
+        url = os.environ.get("SUPABASE_URL", "")
 
-    engine = sqlalchemy.create_engine(
-        sqlalchemy.engine.url.URL.create(
-            drivername="mssql+pytds",
-            username="じゃんぼ",
-            password=password,
-            host="barrier-free-server.database.windows.net",
-            port=1433,
-            database="barrier-free-db",
-        )
-    )
+    engine = sqlalchemy.create_engine(url)
     return engine
 
 # テーブルを作成する関数
@@ -27,28 +18,26 @@ def create_table():
     engine = get_engine()
     with engine.begin() as conn:
         conn.execute(text("""
-            IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='pins' AND xtype='U')
-            CREATE TABLE pins (
-                id INT PRIMARY KEY IDENTITY(1,1),
-                場所名 NVARCHAR(255) NOT NULL,
-                種類 NVARCHAR(50) NOT NULL,
+            CREATE TABLE IF NOT EXISTS pins (
+                id SERIAL PRIMARY KEY,
+                場所名 TEXT NOT NULL,
+                種類 TEXT NOT NULL,
                 緯度 FLOAT NOT NULL,
                 経度 FLOAT NOT NULL,
-                備考 NVARCHAR(1000),
-                投稿日時 DATETIME DEFAULT GETDATE()
+                備考 TEXT,
+                投稿日時 TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """))
         conn.execute(text("""
-            IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='official_pins' AND xtype='U')
-            CREATE TABLE official_pins (
-                id INT PRIMARY KEY IDENTITY(1,1),
-                駅名 NVARCHAR(255) NOT NULL,
-                事業者名 NVARCHAR(255),
-                路線名 NVARCHAR(255),
-                種類 NVARCHAR(50) NOT NULL,
+            CREATE TABLE IF NOT EXISTS official_pins (
+                id SERIAL PRIMARY KEY,
+                駅名 TEXT NOT NULL,
+                事業者名 TEXT,
+                路線名 TEXT,
+                種類 TEXT NOT NULL,
                 緯度 FLOAT NOT NULL,
                 経度 FLOAT NOT NULL,
-                設置数 NVARCHAR(50)
+                設置数 TEXT
             )
         """))
 
