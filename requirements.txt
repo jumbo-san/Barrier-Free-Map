@@ -3,3 +3,5 @@ folium
 streamlit_folium
 pandas
 geopy
+sqlalchemy
+python-tds
