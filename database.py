@@ -153,5 +153,4 @@ def get_reliability_scores():
         """))
         return result.fetchall()
 
-# アプリ起動時にテーブルを自動作成
-create_table()
+# create_table()は削除（初回のみ手動で実行）
