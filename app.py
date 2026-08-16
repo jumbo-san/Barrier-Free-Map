@@ -45,9 +45,8 @@ def load_official_pins(south, north, west, east):
 def load_user_pins(south, north, west, east):
     return database.get_reliability_scores_in_bounds(south, north, west, east)
 
-# デフォルトの表示範囲（初回表示時）
-south, north, west, east = 35.38, 35.46, 136.22, 136.32
-
+# デフォルトの表示範囲（初回表示
+south, north, west, east = 20.0, 50.0, 120.0, 150.0
 # 地図作成
 m = folium.Map(
     location=[35.4198, 136.2657], 
