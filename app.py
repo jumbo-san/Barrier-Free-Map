@@ -4,7 +4,6 @@ from folium.plugins import MarkerCluster
 from streamlit_folium import st_folium
 import database
 import score
-import os
 
 # ページ設定
 st.set_page_config(
@@ -37,24 +36,6 @@ with col2:
 with col3:
     st.page_link("pages/2_一覧.py", label="投稿一覧を見る", use_container_width=True)
 
-# デフォルトの表示範囲（初回表示時）
-DEFAULT_BOUNDS = {
-    "south": 35.38,
-    "north": 35.46,
-    "west": 136.22,
-    "east": 136.32
-}
-
-# 地図の表示範囲をsession_stateで管理
-if "bounds" not in st.session_state:
-    st.session_state["bounds"] = DEFAULT_BOUNDS
-
-bounds = st.session_state["bounds"]
-south = bounds["south"]
-north = bounds["north"]
-west = bounds["west"]
-east = bounds["east"]
-
 # データをキャッシュして取得（TTL=60秒）
 @st.cache_data(ttl=60)
 def load_official_pins(south, north, west, east):
@@ -63,6 +44,9 @@ def load_official_pins(south, north, west, east):
 @st.cache_data(ttl=60)
 def load_user_pins(south, north, west, east):
     return database.get_reliability_scores_in_bounds(south, north, west, east)
+
+# デフォルトの表示範囲（初回表示時）
+south, north, west, east = 35.38, 35.46, 136.22, 136.32
 
 # 地図作成
 m = folium.Map(
@@ -145,17 +129,5 @@ if show_official:
 # 凡例
 st.caption("🔵　エレベーター（投稿）　🟢　スロープ（投稿）　🟠　公式データ（JR）　✅確認済み　🔄確認中")
 
-# 地図を表示して表示範囲を取得
-map_data = st_folium(m, use_container_width=True, height=650)
-
-# 地図の表示範囲が変わったらsession_stateを更新して再描画
-if map_data and map_data.get("bounds"):
-    new_bounds = {
-        "south": map_data["bounds"]["_southWest"]["lat"],
-        "north": map_data["bounds"]["_northEast"]["lat"],
-        "west": map_data["bounds"]["_southWest"]["lng"],
-        "east": map_data["bounds"]["_northEast"]["lng"],
-    }
-    if new_bounds != st.session_state["bounds"]:
-        st.session_state["bounds"] = new_bounds
-        st.rerun()
+# 地図を表示
+st_folium(m, use_container_width=True, height=650)
