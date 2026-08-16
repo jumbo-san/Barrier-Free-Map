@@ -4,6 +4,7 @@ import pandas as pd
 import streamlit as st
 import os
 
+@st.cache_resource
 def get_engine():
     try:
         url = st.secrets["SUPABASE_URL"]
@@ -12,8 +13,8 @@ def get_engine():
 
     engine = sqlalchemy.create_engine(
         url,
-        pool_pre_ping=True,      # 接続前に生存確認
-        pool_recycle=300,        # 5分ごとに接続をリサイクル
+        pool_pre_ping=True,
+        pool_recycle=300,
         pool_size=5,
         max_overflow=10
     )

@@ -26,13 +26,6 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# 初回のみCSVを取り込む
-CSV_PATH = "data/mlit_jr_sta1.csv"
-if os.path.exists(CSV_PATH):
-    if "official_pins_loaded" not in st.session_state:
-        database.import_official_pins(CSV_PATH)
-        st.session_state["official_pins_loaded"] = True
-
 # フィルターとほかのページのリンク
 col1, col2, col3 = st.columns([2, 1, 1])
 with col1:
@@ -62,6 +55,15 @@ north = bounds["north"]
 west = bounds["west"]
 east = bounds["east"]
 
+# データをキャッシュして取得（TTL=60秒）
+@st.cache_data(ttl=60)
+def load_official_pins(south, north, west, east):
+    return database.get_official_pins_in_bounds(south, north, west, east)
+
+@st.cache_data(ttl=60)
+def load_user_pins(south, north, west, east):
+    return database.get_reliability_scores_in_bounds(south, north, west, east)
+
 # 地図作成
 m = folium.Map(
     location=[35.4198, 136.2657], 
@@ -73,7 +75,7 @@ user_cluster = MarkerCluster(name="ユーザー投稿").add_to(m)
 official_cluster = MarkerCluster(name="公式データ（JR）").add_to(m)
 
 # 表示範囲内のユーザー投稿ピンを取得して表示
-reliability_data = database.get_reliability_scores_in_bounds(south, north, west, east)
+reliability_data = load_user_pins(south, north, west, east)
 
 for data in reliability_data:
     場所名 = data[0]
@@ -108,7 +110,7 @@ for data in reliability_data:
 
 # 表示範囲内の公式ピンを取得して表示
 if show_official:
-    official_pins = database.get_official_pins_in_bounds(south, north, west, east)
+    official_pins = load_official_pins(south, north, west, east)
 
     for pin in official_pins:
         駅名 = pin[0]
